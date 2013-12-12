@@ -1,14 +1,21 @@
 services:
-    site.proxy_handler:
+    outlandish_rest.proxy_handler:
         class: Outlandish\RestBundle\Serializer\DoctrineProxyHandler
         arguments: [@doctrine.orm.entity_manager]
         tags:
             - name: jms_serializer.subscribing_handler
-    site.routing_loader:
-            class: Outlandish\RestBundle\Routing\RestLoader
-            arguments: [@doctrine.orm.entity_manager]
-            tags:
-                - name: routing.loader
+    outlandish_rest.routing_loader:
+        class: Outlandish\RestBundle\Routing\RestLoader
+        arguments: [@doctrine.orm.entity_manager]
+        tags:
+            - name: routing.loader
+    outlandish_rest.exception_listener:
+        class: Outlandish\RestBundle\EventDispatcher\ExceptionListener
+        arguments: [@kernel]
+        tags:
+            - name: kernel.event_listener
+              event: kernel.exception
+              method: onKernelException
 
 # override JMS Serializer's Doctrine Proxy Subscriber to allow us to disable it
 parameters:
