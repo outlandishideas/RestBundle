@@ -60,8 +60,16 @@ class RestController extends Controller
 
 		$entity = $em->getRepository($className)->find($id);
 
-		$data = $serializer->serialize($entity, 'json');
-		return new Response($data, 200, array('Content-type' => 'application/json'));
+		if (!$entity) {
+			$data = array(array('message' => 'Entity not found'));
+			$code = 404;
+		} else {
+			$data = $entity;
+			$code = 200;
+		}
+
+		$text = $serializer->serialize($data, 'json');
+		return new Response($text, $code, array('Content-type' => 'application/json'));
 	}
 
 	/**
@@ -70,15 +78,26 @@ class RestController extends Controller
 	public function postAction($entityType, Request $request) {
 		$em = $this->getDoctrine()->getManager();
 		$serializer = $this->get('jms_serializer');
+		$validator = $this->get('validator');
 		$this->get('jms_serializer.doctrine_proxy_subscriber')->setEnabled(false);
 		$className = $this->getFQCN($entityType);
 
 		$entity = $serializer->deserialize($request->getContent(), $className, 'json');
-		$em->persist($entity);
-		$em->flush();
+		$constraintViolations = $validator->validate($entity);
 
-		$data = $serializer->serialize($entity, 'json');
-		return new Response($data, 201, array('Content-type' => 'application/json'));
+		if ($constraintViolations) {
+			$data = $constraintViolations;
+			$code = 400;
+		} else {
+			$em->persist($entity);
+			$em->flush();
+
+			$data = $entity;
+			$code = 201;
+		}
+
+		$text = $serializer->serialize($data, 'json');
+		return new Response($text, $code, array('Content-type' => 'application/json'));
 	}
 
 	/**
@@ -87,13 +106,24 @@ class RestController extends Controller
 	public function putAction($entityType, $id, Request $request) {
 		$em = $this->getDoctrine()->getManager();
 		$serializer = $this->get('jms_serializer');
+		$validator = $this->get('validator');
 		$this->get('jms_serializer.doctrine_proxy_subscriber')->setEnabled(false);
 		$className = $this->getFQCN($entityType);
 
 		$entity = $serializer->deserialize($request->getContent(), $className, 'json');
-		$entity->setId($id);
-		$em->merge($entity);
-		$em->flush();
+		$constraintViolations = $validator->validate($entity);
+
+		if ($constraintViolations) {
+			$data = $constraintViolations;
+			$code = 400;
+		} else {
+			$entity->setId($id);
+			$em->merge($entity);
+			$em->flush();
+
+			$data = $entity;
+			$code = 201;
+		}
 
 		//work around Doctrine detached entities issue with many-to-many associations
 		$reloadedEntity = $em->getRepository($className)->find($id);
@@ -106,8 +136,8 @@ class RestController extends Controller
 		}
 		$em->flush();
 
-		$data = $serializer->serialize($entity, 'json');
-		return new Response($data, 200, array('Content-type' => 'application/json'));
+		$text = $serializer->serialize($data, 'json');
+		return new Response($text, $code, array('Content-type' => 'application/json'));
 	}
 
 	/**
@@ -118,10 +148,19 @@ class RestController extends Controller
 		$className = $this->getFQCN($entityType);
 
 		$entity = $em->getRepository($className)->find($id);
-		$em->remove($entity);
-		$em->flush();
 
-		return new Response('', 204, array('Content-type' => 'application/json'));
+		if (!$entity) {
+			$text = json_encode(array(array('message' => 'Entity not found')));
+			$code = 404;
+		} else {
+			$em->remove($entity);
+			$em->flush();
+
+			$text = '';
+			$code = 204;
+		}
+
+		return new Response($text, $code, array('Content-type' => 'application/json'));
 	}
 
 } 
