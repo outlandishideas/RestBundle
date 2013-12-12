@@ -35,7 +35,6 @@ class RestLoader implements LoaderInterface {
 		$classNames = array();
 		$simpleNames = array();
 		$meta = $this->em->getMetadataFactory()->getAllMetadata();
-		$routes = new RouteCollection();
 		foreach ($meta as $m) {
 			$name = $m->getName();
 			$classNames[] = $name;
@@ -50,6 +49,7 @@ class RestLoader implements LoaderInterface {
 		$putRoute = new Route('/{entityType}/{id}', array('_controller' => 'OutlandishRestBundle:Rest:put'), $requirements, array(), '', array(), array('PUT'));
 		$deleteRoute = new Route('/{entityType}/{id}', array('_controller' => 'OutlandishRestBundle:Rest:delete'), $requirements, array(), '', array(), array('DELETE'));
 
+		$routes = new RouteCollection();
 		$routes->add('outlandish_rest.get_all', $getAllRoute);
 		$routes->add('outlandish_rest.get_one', $getOneRoute);
 		$routes->add('outlandish_rest.post', $postRoute);
