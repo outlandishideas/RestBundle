@@ -85,7 +85,7 @@ class RestController extends Controller
 		$entity = $serializer->deserialize($request->getContent(), $className, 'json');
 		$constraintViolations = $validator->validate($entity);
 
-		if ($constraintViolations) {
+		if (count($constraintViolations)) {
 			$data = $constraintViolations;
 			$code = 400;
 		} else {
@@ -113,7 +113,7 @@ class RestController extends Controller
 		$entity = $serializer->deserialize($request->getContent(), $className, 'json');
 		$constraintViolations = $validator->validate($entity);
 
-		if ($constraintViolations) {
+		if (count($constraintViolations)) {
 			$data = $constraintViolations;
 			$code = 400;
 		} else {
@@ -122,7 +122,7 @@ class RestController extends Controller
 			$em->flush();
 
 			$data = $entity;
-			$code = 201;
+			$code = 200;
 		}
 
 		//work around Doctrine detached entities issue with many-to-many associations
