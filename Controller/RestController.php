@@ -5,6 +5,7 @@ namespace Outlandish\RestBundle\Controller;
 
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Doctrine\ORM\Query;
+use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\HttpFoundation\Request;
@@ -35,17 +36,24 @@ class RestController extends Controller
 
 	/**
 	 * Get array of all entities of type
+	 *
+	 * Supports simple queries with FIQL and pagination with 'start' and 'per_page'
 	 */
-	public function getAllAction($entityType) {
-		$em = $this->getDoctrine()->getManager();
+	public function getAllAction($entityType, Request $request) {
+		$em = $this->get('doctrine.orm.entity_manager');
 		$serializer = $this->get('jms_serializer');
 		$this->get('jms_serializer.doctrine_proxy_subscriber')->setEnabled(false);
 		$className = $this->getFQCN($entityType);
 
-		$entities = $em->getRepository($className)->findAll();
+		$builder = $em->createQueryBuilder();
+		$builder->setMaxResults($request->query->get('per_page', 1000))->setFirstResult($request->query->get('start', 0));
+		$builder->select('e')->from($className, 'e');
+		$this->parseFIQL($request, $builder);
 
-		$data = $serializer->serialize($entities, 'json');
-		return new Response($data, 200, array('Content-type' => 'application/json'));
+		$entities = $builder->getQuery()->getResult();
+
+		$text = $serializer->serialize($entities, 'json');
+		return new Response($text, 200, array('Content-type' => 'application/json'));
 	}
 
 
@@ -163,4 +171,56 @@ class RestController extends Controller
 		return new Response($text, $code, array('Content-type' => 'application/json'));
 	}
 
+	/**
+	 * Parse simple data queries such as foo=baz&bar=lt=10
+	 *
+	 * It's kind of a subset of FIQL http://cxf.apache.org/docs/jax-rs-search.html
+	 *
+	 * @param Request $request
+	 * @param QueryBuilder $builder
+	 */
+	protected function parseFIQL(Request $request, QueryBuilder $builder) {
+		//allowed operators
+		$operatorMap = array('' => '=', 'ne' => '!=', 'lt' => '<', 'gt' => '>', 'le' => '<=', 'ge' => '>=');
+
+		//load class metadata
+		$em = $builder->getEntityManager();
+		$classNames = $builder->getRootEntities();
+		$metadata = $em->getClassMetadata($classNames[0]);
+
+		//process query parts
+		foreach ($request->query->all() as $name => $value) {
+			//default operator
+			$operator = '';
+
+			//check for negation
+			if (substr($name, -1) == '!') {
+				$operator = 'ne';
+				$name = substr($name, 0, -1);
+			}
+
+			//convert query_property to queryProperty
+			$camelName = Container::camelize($name);
+			$camelName[0] = strtolower($camelName[0]);
+
+			//check queried property exists
+			if (!isset($metadata->columnNames[$camelName]) && !isset($metadata->associationMappings[$camelName])) {
+				continue;
+			}
+
+			//look for explicit operator
+			if (strpos($value, '=') !== false) {
+				list($operator, $value) = explode('=', $value, 2);
+			}
+
+			//ensure operator is valid
+			if (!isset($operatorMap[$operator])) {
+				continue;
+			}
+
+			//add to query
+			$builder->andWhere('e.'.$camelName . $operatorMap[$operator].':'.$name);
+			$builder->setParameter($name, $value);
+		}
+	}
 } 
