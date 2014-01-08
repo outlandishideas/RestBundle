@@ -37,7 +37,7 @@ class RestController extends Controller
 	/**
 	 * Get array of all entities of type
 	 *
-	 * Supports simple queries with FIQL and pagination with 'start' and 'per_page'
+	 * Supports simple queries with FIQL and pagination with 'offset' and 'per_page'
 	 */
 	public function getAllAction($entityType, Request $request) {
 		$em = $this->get('doctrine.orm.entity_manager');
@@ -46,7 +46,7 @@ class RestController extends Controller
 		$className = $this->getFQCN($entityType);
 
 		$builder = $em->createQueryBuilder();
-		$builder->setMaxResults($request->query->get('per_page', 1000))->setFirstResult($request->query->get('start', 0));
+		$builder->setMaxResults($request->query->get('per_page', 1000))->setFirstResult($request->query->get('offset', 0));
 		$builder->select('e')->from($className, 'e');
 		$this->parseFIQL($request, $builder);
 

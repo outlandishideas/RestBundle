@@ -20,10 +20,10 @@ class RestLoader implements LoaderInterface {
 	}
 
 	/**
-	 * Loads a resource.
+	 * Dynamically create routes for entities
 	 *
-	 * @param mixed $resource The resource
-	 * @param string $type The resource type
+	 * @param mixed $resource
+	 * @param string $type
 	 * @throws \RuntimeException
 	 * @return RouteCollection
 	 */
@@ -34,11 +34,11 @@ class RestLoader implements LoaderInterface {
 
 		$classNames = array();
 		$simpleNames = array();
-		$meta = $this->em->getMetadataFactory()->getAllMetadata();
-		foreach ($meta as $m) {
-			$name = $m->getName();
+		$classes = $this->em->getMetadataFactory()->getAllMetadata();
+		foreach ($classes as $class) {
+			$name = $class->getName();
 			$classNames[] = $name;
-			$simpleNames[] = Container::underscore(substr($m->getName(), strrpos($m->getName(), '\\') + 1));
+			$simpleNames[] = Container::underscore(substr($name, strrpos($name, '\\') + 1));
 		}
 
 		$requirements = array('entityType' => implode('|', $simpleNames), 'id' => '\d+');
@@ -55,6 +55,8 @@ class RestLoader implements LoaderInterface {
 		$routes->add('outlandish_rest.post', $postRoute);
 		$routes->add('outlandish_rest.put', $putRoute);
 		$routes->add('outlandish_rest.delete', $deleteRoute);
+
+		$this->loaded = true;
 
 		return $routes;
 	}

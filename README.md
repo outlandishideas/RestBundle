@@ -1,38 +1,47 @@
-# A REST API in a Box
+# REST API in a Box
 
-The `OutlandishRestBundle` provides a REST API for the Doctrine entities in a Symfony application. It is highly
+The `OutlandishRestBundle` provides a REST-like API for the Doctrine entities in a Symfony application. It is highly
 opinionated and requires no configuration which makes it an excellent choice for rapid prototyping with JavaScript
 frameworks such as Angular, Ember and Backbone.
 
 Features:
 
 - automatically generates routes
-- uses JMSSerializer and supports Symfony validator component
+- uses JMSSerializer bundle
+- uses Symfony validator component
 - serializes errors and exceptions
 - supports Doctrine associations
 - uses JSON only
+- pagination
+- simple data queries using FIQL
 - authentication can be added using the security component
 
 For example if you have `Acme\FooBundle\Entity\Bar` then you can do the following:
 
-    GET /bar
-    // returns [{"id":1, ...}, {"id":2, ..}]
+    GET /api/bar
+    // returns [{"id":1, ...}, {"id":2, ...}]
 
-    GET /bar/1
+    GET /api/bar/1
     // returns {"id":1, ...}
 
-    POST /bar
-    {...}
-    // returns {"id":3, ...}
+    POST /api/bar
+    {"foo":"baz", ...}
+    // returns {"id":3, "foo":"baz", ...}
 
-    PUT /bar/2
-    {...}
-    // returns {"id":2, ...}
+    PUT /api/bar/2
+    {"foo":"buzz", ...}
+    // returns {"id":2, "foo":"buzz", ...}
 
-    DELETE /bar/3
+    DELETE /api/bar/3
     // returns nothing
 
-    GET /bar/0
+    GET /api/bar?id=gt=2&foo=baz
+    // returns [{"id":3, ...}]
+
+    GET /api/bar?per_page=2&offset=1
+    // returns [{"id":2, ...}, {"id":3, ...}]
+
+    GET /api/bar/0
     // returns [{"message":"Entity not found"}]
 
 POST and PUT requests expect JSON encoded entity data in the request body.
