@@ -22,7 +22,7 @@ class RestController extends Controller
 	 * @return mixed
 	 */
 	protected function getFQCN($entityType) {
-		$meta = $this->getDoctrine()->getManager()->getMetadataFactory()->getAllMetadata();
+		$meta = $this->get('doctrine.orm.entity_manager')->getMetadataFactory()->getAllMetadata();
 		foreach ($meta as $m) {
 			$fqcn = $m->getName();
 			$simpleName = Container::underscore(substr($fqcn, strrpos($fqcn, '\\') + 1));
@@ -188,8 +188,13 @@ class RestController extends Controller
 		$classNames = $builder->getRootEntities();
 		$metadata = $em->getClassMetadata($classNames[0]);
 
+		//use raw query string to allow for multiple instances of same param, e.g. foo=gt=1&foo=lt=3
+		$queryParts = $_SERVER['QUERY_STRING'] ? explode('&', $_SERVER['QUERY_STRING']) : array();
+
 		//process query parts
-		foreach ($request->query->all() as $name => $value) {
+		foreach ($queryParts as $index => $part) {
+			list($name, $value) = explode('=', $part, 2);
+
 			//default operator
 			$operator = '';
 
@@ -219,8 +224,8 @@ class RestController extends Controller
 			}
 
 			//add to query
-			$builder->andWhere('e.'.$camelName . $operatorMap[$operator].':'.$name);
-			$builder->setParameter($name, $value);
+			$builder->andWhere('e.'.$camelName . $operatorMap[$operator].':'.$name.$index);
+			$builder->setParameter($name.$index, $value);
 		}
 	}
 } 
