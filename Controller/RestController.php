@@ -45,14 +45,72 @@ class RestController extends Controller
 		$this->get('jms_serializer.doctrine_proxy_subscriber')->setEnabled(false);
 		$className = $this->getFQCN($entityType);
 
+		//build basic DQL query
 		$builder = $em->createQueryBuilder();
 		$builder->setMaxResults($request->query->get('per_page', 1000))->setFirstResult($request->query->get('offset', 0));
 		$builder->select('e')->from($className, 'e');
 		$this->parseFIQL($request, $builder);
 
-		$entities = $builder->getQuery()->getResult();
+		$fastSerialization = false; //todo: make this configurable
+		if ($fastSerialization) {
 
-		$text = $serializer->serialize($entities, 'json');
+			$meta = $em->getClassMetadata($className);
+			$associationMappings = $meta->getAssociationMappings();
+			$fieldNames = $meta->getFieldNames();
+
+			//explicit joins and selects for associated IDs
+			foreach ($associationMappings as $assocName => $assoc) {
+				if (isset($assoc['joinTable'])) {
+					$builder->leftJoin('e.'.$assocName, $assocName.'Table');
+					$builder->add('select', "{$assocName}Table.id AS {$assocName}", true);
+				} else {
+					$builder->add('select', "IDENTITY(e.$assocName) AS $assocName", true);
+				}
+			}
+
+			//fetch flat data
+			$rows = $builder->getQuery()->execute(null, Query::HYDRATE_SCALAR);
+
+			//unflatten rows with arrays of IDs for *-to-many associations
+			$id = null;
+			$data = array();
+			$entity = array();
+			foreach ($rows as $row) {
+				if ($id != $row['e_id']) {
+					//id has changed to is next row
+					$data[] = $entity;
+					$entity = array();
+
+					//copy normal field data
+					foreach ($fieldNames as $fieldName) {
+						$entity[$fieldName] = $row['e_'.$fieldName];
+					}
+					$id = $entity['id'];
+				}
+
+				//copy associated fields
+				foreach ($associationMappings as $assocName => $assoc) {
+					if (isset($assoc['joinTable'])) {
+						if (!isset($entity[$assocName])) $entity[$assocName] = array();
+						if ($row[$assocName] != null) $entity[$assocName][] = $row[$assocName];
+					} else {
+						$entity[$assocName] = $row[$assocName];
+					}
+				}
+
+			}
+			//add last item
+			$data[] = $entity;
+			//remove first (empty) item
+			array_shift($data);
+
+			$text = json_encode($data);
+		} else {
+			//normal serialization
+			$entities = $builder->getQuery()->getResult();
+			$text = $serializer->serialize($entities, 'json');
+		}
+
 		return new Response($text, 200, array('Content-type' => 'application/json'));
 	}
 
