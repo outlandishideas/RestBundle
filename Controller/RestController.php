@@ -47,7 +47,11 @@ class RestController extends Controller
 
 		//build basic DQL query
 		$builder = $em->createQueryBuilder();
-		$builder->setMaxResults($request->query->get('per_page', 1000))->setFirstResult($request->query->get('offset', 0));
+		$builder->setFirstResult($request->query->get('offset', 0));
+		$defaultPageSize = 0; //todo: make this configurable
+		if ($defaultPageSize) {
+			$builder->setMaxResults($request->query->get('per_page', $defaultPageSize));
+		}
 		$builder->select('e')->from($className, 'e');
 		$this->parseFIQL($request, $builder);
 
@@ -84,6 +88,11 @@ class RestController extends Controller
 					//copy normal field data
 					foreach ($fieldNames as $fieldName) {
 						$entity[$fieldName] = $row['e_'.$fieldName];
+
+						//serialize DateTime objects
+						if ($entity[$fieldName] instanceof \DateTime) {
+							$entity[$fieldName] = $entity[$fieldName]->format(\DateTime::ISO8601);
+						}
 					}
 					$id = $entity['id'];
 				}
