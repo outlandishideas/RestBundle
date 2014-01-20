@@ -49,8 +49,9 @@ class RestController extends Controller
 		$builder = $em->createQueryBuilder();
 		$builder->setFirstResult($request->query->get('offset', 0));
 		$defaultPageSize = 0; //todo: make this configurable
-		if ($defaultPageSize) {
-			$builder->setMaxResults($request->query->get('per_page', $defaultPageSize));
+		$pageSize = $request->query->get('per_page', $defaultPageSize);
+		if ($pageSize) {
+			$builder->setMaxResults($pageSize);
 		}
 		$builder->select('e')->from($className, 'e');
 		$this->parseFIQL($request, $builder);
