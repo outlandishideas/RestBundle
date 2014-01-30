@@ -82,7 +82,7 @@ class RestController extends Controller
 			$entity = array();
 			foreach ($rows as $row) {
 				if ($id != $row['e_id']) {
-					//id has changed to is next row
+					//id has changed so is next row
 					$data[] = $entity;
 					$entity = array();
 
