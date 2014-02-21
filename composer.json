@@ -1,0 +1,14 @@
+{
+    "name": "outlandish/rest-bundle",
+    "require": {
+	    "symfony/framework-bundle": "~2.3",
+		"doctrine/orm": "~2.3",
+		"jms/serializer-bundle": "*"
+    },
+	"autoload": {
+		"psr-0": {
+			"Outlandish\\RestBundle\\": ""
+		}
+	},
+	"target-dir": "Outlandish/RestBundle"
+}
