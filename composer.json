@@ -1,5 +1,8 @@
 {
     "name": "outlandish/rest-bundle",
+	"type": "symfony-bundle",
+    "description": "Provides a REST-like API for the Doctrine entities in a Symfony application.",
+    "keywords": ["rest", "doctrine"],
     "require": {
 	    "symfony/framework-bundle": "~2.3",
 		"doctrine/orm": "~2.3",
